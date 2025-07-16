@@ -2,8 +2,6 @@
 import dynamic from "next/dynamic";
 import { useEffect, useState, useRef } from "react";
 import "leaflet/dist/leaflet.css";
-import * as L from "leaflet";
-import { useMap } from "react-leaflet";
 
 type Filters = {
   years: number[];
@@ -18,13 +16,7 @@ const Marker = dynamic(() => import("react-leaflet").then(mod => mod.Marker), { 
 const Popup = dynamic(() => import("react-leaflet").then(mod => mod.Popup), { ssr: false });
 const MarkerClusterGroup = dynamic(() => import("react-leaflet-cluster"), { ssr: false });
 
-function SetMapRef({ mapRef }: { mapRef: React.MutableRefObject<any> }) {
-  const map = useMap();
-  useEffect(() => {
-    mapRef.current = map;
-  }, [map]);
-  return null;
-}
+const MapClientWrapper = dynamic(() => import('./MapClientWrapper'), { ssr: false });
 
 export default function MapPage() {
   const [attacks, setAttacks] = useState<any[]>([]);
@@ -191,56 +183,16 @@ export default function MapPage() {
         </div>
       </div>
 
-      <MapContainer
-        center={[20, 0]}
-        zoom={2}
-        scrollWheelZoom={true}
-        className="h-full w-full"
-      >
-        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-        <SetMapRef mapRef={mapRef} />
-        {icon && (
-          <MarkerClusterGroup chunkedLoading>
-            {attacks
-              .filter(a => !searchText || (a.summary && a.summary.toLowerCase().includes(searchText.toLowerCase())))
-              .map((a, idx) => (
-                <Marker key={idx} position={[a.latitude, a.longitude]} icon={icon}>
-                  <Popup>
-                    <div className="text-sm space-y-1">
-                      <p className="font-bold text-blue-700">{a.country_txt}</p>
-                      <p>{a.city ? `${a.city} - ` : ""}{a.iyear}</p>
-                      <p className="text-red-600">Victimes : {a.nkill}</p>
-                      <button
-                        onClick={() => showDetails(a.eventid)}
-                        className="text-xs mt-1 underline text-blue-500 hover:text-blue-700"
-                      >
-                        + de détails
-                      </button>
-                      {fullDetails && fullDetails.eventid === a.eventid && (
-                        <div className="mt-2 text-left text-xs bg-gray-100 p-2 rounded shadow-inner space-y-1">
-                          <p><span className="font-medium">Résumé:</span> {fullDetails.summary || "N/A"}</p>
-                          <p><span className="font-medium">Groupe:</span> {fullDetails.gname}</p>
-                          <p><span className="font-medium">Type d'attaque:</span> {fullDetails.attacktype1_txt}</p>
-                          <p><span className="font-medium">Arme:</span> {fullDetails.weaptype1_txt}</p>
-                          <p><span className="font-medium">Cible:</span> {fullDetails.targtype1_txt}</p>
-                          <p><span className="font-medium">Motif:</span> {fullDetails.motive || "N/A"}</p>
-                        </div>
-                      )}
-                    </div>
-                  </Popup>
-                </Marker>
-              ))}
-          </MarkerClusterGroup>
-        )}
-        {loadingMap && (
-          <div className="absolute inset-0 flex items-center justify-center z-[9999] pointer-events-none">
-            <div className="flex items-center gap-2">
-              <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-500" />
-              <span className="text-sm text-gray-700">Chargement des données...</span>
-            </div>
-          </div>
-        )}
-      </MapContainer>
+      <MapClientWrapper
+        key={JSON.stringify({ yearFilter, countryFilter, groupFilter, victimFilter, page })}
+        attacks={attacks}
+        icon={icon}
+        loadingMap={loadingMap}
+        mapRef={mapRef}
+        searchText={searchText}
+        fullDetails={fullDetails}
+        showDetails={showDetails}
+      />
     </div>
   );
 }
