@@ -19,7 +19,9 @@
 
 # production
 /build
-
+public/gtd_full.json
+public/gtd_filters.json
+public/gtd_map.json
 
 # misc
 .DS_Store
