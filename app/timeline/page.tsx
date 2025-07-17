@@ -33,8 +33,16 @@ export default function TimelinePage() {
   useEffect(() => {
     setLoading(true);
     fetch("/api/filters")
-      .then(res => res.json())
+      .then(async res => {
+        if (!res.ok) {
+          const errText = await res.text();
+          console.error("Erreur API /api/filters :", errText);
+          return;
+        }
+        return res.json();
+      })
       .then(async (data) => {
+        if (!data) return;
         setYears(data.years);
         console.log("Années récupérées:", data.years);
         const yearCounts: { [key: number]: number } = {};
