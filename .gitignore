@@ -22,6 +22,7 @@
 public/gtd_full.json
 public/gtd_filters.json
 public/gtd_map.json
+exports
 
 # misc
 .DS_Store

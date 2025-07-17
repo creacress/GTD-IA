@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import Database from "better-sqlite3";
+import { createClient } from '@supabase/supabase-js';
 
-const db = new Database("public/database/gtd.db", { readonly: true });
+const supabaseUrl = process.env.SUPABASE_URL!;
+const supabaseKey = process.env.SUPABASE_ANON_KEY!;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -15,38 +17,22 @@ export async function GET(req: NextRequest) {
   const limit = parseInt(searchParams.get("limit") || "100", 10);
   const offset = (page - 1) * limit;
 
-  let sql = `
-    SELECT eventid, iyear, country_txt, attacktype1_txt, weaptype1_txt, nkill, gname
-    FROM attacks
-    WHERE 1=1
-  `;
+  let query = supabase
+    .from("attacks")
+    .select("eventid, iyear, country_txt, attacktype1_txt, weaptype1_txt, nkill, gname")
+    .range(offset, offset + limit - 1);
 
-  const params: any = {};
-  if (year) {
-    sql += " AND iyear = @year";
-    params.year = Number(year);
-  }
-  if (country) {
-    sql += " AND country_txt = @country";
-    params.country = country;
-  }
-  if (attackType) {
-    sql += " AND attacktype1_txt = @attackType";
-    params.attackType = attackType;
-  }
-  if (weaponType) {
-    sql += " AND weaptype1_txt = @weaponType";
-    params.weaponType = weaponType;
-  }
-  if (!isNaN(nkill)) {
-    sql += " AND nkill >= @nkill";
-    params.nkill = nkill;
+  if (year) query = query.eq("iyear", Number(year));
+  if (country) query = query.eq("country_txt", country);
+  if (attackType) query = query.eq("attacktype1_txt", attackType);
+  if (weaponType) query = query.eq("weaptype1_txt", weaponType);
+  if (!isNaN(nkill)) query = query.gte("nkill", nkill);
+
+  const { data, error } = await query;
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  sql += " LIMIT @limit OFFSET @offset";
-  params.limit = limit;
-  params.offset = offset;
-
-  const rows = db.prepare(sql).all(params);
-  return NextResponse.json(rows);
+  return NextResponse.json(data);
 }

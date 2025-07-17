@@ -1,13 +1,33 @@
 import path from "path";
 import { NextResponse } from "next/server";
-import Database from "better-sqlite3";
+import { createClient } from '@supabase/supabase-js';
 
-const db = new Database(path.join(process.cwd(), "public", "database", "gtd.db"), { readonly: true });
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
 export async function GET() {
-  const years = (db.prepare("SELECT DISTINCT iyear FROM attacks ORDER BY iyear DESC").all() as { iyear: number }[]).map(r => r.iyear);
-  const countries = (db.prepare("SELECT DISTINCT country_txt FROM attacks ORDER BY country_txt").all() as { country_txt: string }[]).map(r => r.country_txt);
-  const groups = (db.prepare("SELECT DISTINCT gname FROM attacks ORDER BY gname").all() as { gname: string }[]).map(r => r.gname);
+  const { data: yearRows, error: yearError } = await supabase
+    .from("attacks")
+    .select("iyear");
 
-  return NextResponse.json({ years, countries, groups });
+  const { data: countryRows, error: countryError } = await supabase
+    .from("attacks")
+    .select("country_txt");
+
+  const { data: groupRows, error: groupError } = await supabase
+    .from("attacks")
+    .select("gname");
+
+  if (yearError || countryError || groupError) {
+    return NextResponse.json({ error: "Failed to fetch filters" }, { status: 500 });
+  }
+
+  const yearsData = Array.from(new Set((yearRows || []).map(r => r.iyear))).sort((a, b) => b - a);
+  const countriesData = Array.from(new Set((countryRows || []).map(r => r.country_txt))).sort();
+  const groupsData = Array.from(new Set((groupRows || []).map(r => r.gname))).sort();
+
+  return NextResponse.json({
+    years: yearsData,
+    countries: countriesData,
+    groups: groupsData
+  });
 }

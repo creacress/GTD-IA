@@ -1,17 +1,23 @@
-import path from "path";
 import { NextRequest, NextResponse } from "next/server";
-import Database from "better-sqlite3";
+import { createClient } from "@supabase/supabase-js";
 
-const dbPath = path.join(process.cwd(), "public/database/gtd.db");
-const db = new Database(dbPath, { readonly: true });
+const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
+  
   if (id) {
-    const row = db.prepare("SELECT * FROM attacks WHERE eventid = ?").get(id);
-    return NextResponse.json(row || {});
+    const { data, error } = await supabase
+      .from("attaques")
+      .select("*")
+      .eq("eventid", id)
+      .maybeSingle();
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(data || {});
   }
+
   const year = searchParams.get("year");
   const country = searchParams.get("country");
   const group = searchParams.get("group");
@@ -21,35 +27,27 @@ export async function GET(req: NextRequest) {
   const limit = parseInt(searchParams.get("limit") || "500", 10);
   const offset = (page - 1) * limit;
 
-  let sql = `
-    SELECT eventid, latitude, longitude, iyear, country_txt, gname, nkill
-    FROM attacks
-    WHERE nkill >= @victims
-  `;
-  const params: any = { victims };
+  let query = supabase
+    .from("attaques")
+    .select("eventid, latitude, longitude, iyear, country_txt, gname, nkill", { count: "exact" })
+    .gte("nkill", victims);
 
-  if (year)    { sql += " AND iyear = @year"; params.year = Number(year); }
-  if (country) { sql += " AND country_txt = @country"; params.country = country; }
-  if (group)   { sql += " AND gname = @group"; params.group = group; }
+  if (year) query = query.eq("iyear", parseInt(year));
+  if (country) query = query.eq("country_txt", country);
+  if (group) query = query.eq("gname", group);
 
   if (bbox) {
     const [minLon, minLat, maxLon, maxLat] = bbox.split(",").map(Number);
-    sql += " AND latitude BETWEEN @minLat AND @maxLat AND longitude BETWEEN @minLon AND @maxLon";
-    Object.assign(params, { minLat, maxLat, minLon, maxLon });
+    query = query
+      .gte("latitude", minLat).lte("latitude", maxLat)
+      .gte("longitude", minLon).lte("longitude", maxLon);
   }
 
-  sql += " LIMIT @limit OFFSET @offset";
-  Object.assign(params, { limit, offset });
-  const rows = db.prepare(sql).all(params);
-  const countStmt = db.prepare(`SELECT COUNT(*) as total FROM attacks WHERE nkill >= @victims` + 
-    (year ? " AND iyear = @year" : "") +
-    (country ? " AND country_txt = @country" : "") +
-    (group ? " AND gname = @group" : "") +
-    (bbox ? " AND latitude BETWEEN @minLat AND @maxLat AND longitude BETWEEN @minLon AND @maxLon" : "")
-  );
-  const result = countStmt.get(params) as { total: number };
-  const total = result.total;
-  const res = NextResponse.json(rows);
-  res.headers.set("x-total-count", total.toString());
+  const { data, count, error } = await query.range(offset, offset + limit - 1);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  const res = NextResponse.json(data);
+  res.headers.set("x-total-count", count?.toString() || "0");
   return res;
 }
