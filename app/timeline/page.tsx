@@ -43,17 +43,19 @@ export default function TimelinePage() {
       })
       .then(async (data) => {
         if (!data) return;
-        setYears(data.years);
-        console.log("Années récupérées:", data.years);
+        const uniqueYears = (Array.from(new Set(data.years as number[])))
+          .filter((y): y is number => typeof y === 'number' && !isNaN(y))
+          .sort((a, b) => a - b);
+        console.log("Data.years brut:", data.years);
+        setYears(uniqueYears as number[]);
+        console.log("Années récupérées:", uniqueYears);
         const yearCounts: { [key: number]: number } = {};
   
-        await Promise.all(
-          data.years.map(async (year: number) => {
-            const res = await fetch(`/api/attacks?year=${year}&limit=1`);
-            const count = res.headers.get("x-total-count") || "0";
-            yearCounts[year] = parseInt(count, 10);
-          })
-        );
+        await Promise.all((uniqueYears as number[]).map(async (year: number) => {
+          const res = await fetch(`/api/attacks?year=${year}`);
+          const count = res.headers.get("x-total-count") || "0";
+          yearCounts[year] = parseInt(count, 10);
+        }));
   
         setCounts(yearCounts);
         console.log("Nombre d'attentats par année:", yearCounts);
@@ -72,6 +74,7 @@ export default function TimelinePage() {
   const chartData = useMemo(() => {
     if (years.length === 0 || Object.keys(counts).length === 0) return null;
 
+    console.log("Données chartData:", years.map(y => counts[y] || 0));
     return {
       labels: years,
       datasets: [
@@ -183,6 +186,11 @@ export default function TimelinePage() {
       {loading && (
         <div className="text-center py-4">
           <span className="text-white/80 animate-pulse">Chargement des données...</span>
+        </div>
+      )}
+      {!loading && !chartData && (
+        <div className="text-white/80 text-center">
+          Aucune donnée disponible pour le moment.
         </div>
       )}
       

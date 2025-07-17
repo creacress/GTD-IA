@@ -25,10 +25,10 @@ export async function GET(req: NextRequest) {
     .select("eventid, iyear, country_txt, attacktype1_txt, weaptype1_txt, nkill, gname")
     .range(offset, offset + limit - 1);
 
-  if (year) query = query.eq("iyear", Number(year));
-  if (country) query = query.eq("country_txt", country);
-  if (attackType) query = query.eq("attacktype1_txt", attackType);
-  if (weaponType) query = query.eq("weaptype1_txt", weaponType);
+  if (year && year !== "-- Tous --") query = query.eq("iyear", Number(year));
+  if (country && country !== "-- Tous --") query = query.eq("country_txt", country);
+  if (attackType && attackType !== "-- Tous --") query = query.eq("attacktype1_txt", attackType);
+  if (weaponType && weaponType !== "-- Tous --") query = query.eq("weaptype1_txt", weaponType);
   if (!isNaN(nkill)) query = query.gte("nkill", nkill);
 
   const { data, error } = await query;

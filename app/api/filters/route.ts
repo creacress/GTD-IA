@@ -11,8 +11,8 @@ const supabase = createClient(
 
 export async function GET() {
   const { data: yearRows, error: yearError } = await supabase
-    .from("attacks")
-    .select("iyear");
+    .rpc('distinct_years');
+
   console.log("Résultat iyear:", yearRows);
 
   const { data: countryRows, error: countryError } = await supabase
@@ -33,7 +33,10 @@ export async function GET() {
     return NextResponse.json({ error: "Failed to fetch filters" }, { status: 500 });
   }
 
-  const yearsData = Array.from(new Set((yearRows || []).map(r => r.iyear))).sort((a, b) => b - a);
+  const yearsData = (Array.from(
+    new Set((yearRows || []).map((r: { iyear: number }) => r.iyear).filter((y: number): y is number => typeof y === "number"))
+  ) as number[]).sort((a, b) => b - a);
+  console.log("Nombre total d'années récupérées:", yearsData.length);
   const countriesData = Array.from(new Set((countryRows || []).map(r => r.country_txt))).sort();
   const groupsData = Array.from(new Set((groupRows || []).map(r => r.gname))).sort();
 

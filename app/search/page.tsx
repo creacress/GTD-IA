@@ -17,7 +17,12 @@ const SearchPage = () => {
     nwound: '',
   });
 
-  const [options, setOptions] = useState({
+  const [options, setOptions] = useState<{
+    countries: string[];
+    attackTypes: string[];
+    weaponTypes: string[];
+    years: number[];
+  }>({
     countries: [],
     attackTypes: [],
     weaponTypes: [],
@@ -71,7 +76,17 @@ const SearchPage = () => {
     const fetchOptions = async () => {
       const res = await fetch('/api/search/options');
       const data = await res.json();
-      setOptions(data);
+      // Nettoyage des années pour uniformiser et éviter doublons/problèmes de type
+      const cleanYears = (Array.from(new Set(data.years as number[])))
+        .filter((y): y is number => typeof y === 'number' && !isNaN(y))
+        .sort((a, b) => a - b);
+
+      setOptions({
+        countries: data.countries,
+        attackTypes: data.attackTypes,
+        weaponTypes: data.weaponTypes,
+        years: cleanYears
+      });
     };
 
     fetchOptions();
@@ -114,7 +129,7 @@ const SearchPage = () => {
 
         <select name="year" value={filters.year} onChange={handleChange} className="border border-gray-300 rounded px-3 py-2">
           <option value="">Année</option>
-          {options.years.map((y: number) => (
+          {(options.years as number[]).map((y) => (
             <option key={y} value={y}>{y}</option>
           ))}
         </select>
