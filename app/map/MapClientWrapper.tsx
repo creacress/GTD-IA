@@ -2,7 +2,6 @@
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import { useEffect } from "react";
-import L from "leaflet";
 
 type Attack = {
   latitude: number;
