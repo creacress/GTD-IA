@@ -85,11 +85,20 @@ export default function MapPage() {
 
     params.set("limit", String(baseLimit));
 
-    const bounds = mapRef.current?.getBounds();
-    if (bounds) {
-      const sw = bounds.getSouthWest();
-      const ne = bounds.getNorthEast();
-      params.set("bbox", `${sw.lng},${sw.lat},${ne.lng},${ne.lat}`);
+    if (
+      mapRef.current &&
+      typeof mapRef.current.getBounds === "function" &&
+      mapRef.current._container &&
+      mapRef.current._container._leaflet_pos
+    ) {
+      try {
+        const bounds = mapRef.current.getBounds();
+        const sw = bounds.getSouthWest();
+        const ne = bounds.getNorthEast();
+        params.set("bbox", `${sw.lng},${sw.lat},${ne.lng},${ne.lat}`);
+      } catch (err) {
+        console.warn("Erreur lors de l'accès aux bounds de la carte :", err);
+      }
     }
 
     fetch(`/api/attacks?${params.toString()}`)

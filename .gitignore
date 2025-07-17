@@ -36,7 +36,7 @@ yarn-error.log*
 
 # vercel
 .vercel
-gtd.db
+app/api/attacks/data/gtd.db
 
 # typescript
 *.tsbuildinfo

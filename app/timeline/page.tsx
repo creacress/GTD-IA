@@ -109,16 +109,20 @@ export default function TimelinePage() {
           </button>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredEvents.map((e) => (
-            <div
-              key={e.eventid}
-              className="bg-white shadow-md rounded-lg p-4 border border-gray-200 hover:shadow-lg transition-shadow duration-300"
-            >
-              <p className="text-sm text-white/80"><strong>Pays :</strong> {e.country_txt}</p>
-              <p className="text-sm text-white/80"><strong>Groupe :</strong> {e.gname}</p>
-              <p className="text-sm text-white/80"><strong>Morts :</strong> {e.nkill ?? 0}</p>
-            </div>
-          ))}
+          {filteredEvents.length > 0 ? (
+            filteredEvents.map((e) => (
+              <div
+                key={e.eventid}
+                className="bg-white shadow-md rounded-lg p-4 border border-gray-200 hover:shadow-lg transition-shadow duration-300"
+              >
+                <p className="text-sm text-black"><strong>Pays :</strong> {e.country_txt || "Non renseigné"}</p>
+                <p className="text-sm text-black"><strong>Groupe :</strong> {e.gname || "Inconnu"}</p>
+                <p className="text-sm text-black"><strong>Morts :</strong> {(e.nkill ?? 0).toString()}</p>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-gray-500">Aucune donnée disponible pour cette année.</p>
+          )}
         </div>
         {filteredEvents.length === 0 && (
           <p className="text-center text-white/80 text-sm mt-4">
