@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   
   if (id) {
     const { data, error } = await supabase
-      .from("attaques")
+      .from("attacks")
       .select("*")
       .eq("eventid", id)
       .maybeSingle();
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
   const offset = (page - 1) * limit;
 
   let query = supabase
-    .from("attaques")
+    .from("attacks")
     .select("eventid, latitude, longitude, iyear, country_txt, gname, nkill", { count: "exact" })
     .gte("nkill", victims);
 
