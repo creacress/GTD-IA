@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import Database from "better-sqlite3";
 
 
-const db = new Database("app/api/attacks/data/gtd.db", { readonly: true });
+const db = new Database("public/database/gtd.db", { readonly: true });
 
 export async function GET() {
   const countries = db.prepare("SELECT DISTINCT country_txt FROM attacks ORDER BY country_txt ASC").all().map((r: any) => r.country_txt);

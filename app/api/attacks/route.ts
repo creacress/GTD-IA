@@ -1,7 +1,9 @@
+import path from "path";
 import { NextRequest, NextResponse } from "next/server";
 import Database from "better-sqlite3";
 
-const db = new Database("app/api/attacks/data/gtd.db", { readonly: true });
+const dbPath = path.join(process.cwd(), "public/database/gtd.db");
+const db = new Database(dbPath, { readonly: true });
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
