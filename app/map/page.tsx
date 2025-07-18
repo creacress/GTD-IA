@@ -139,6 +139,8 @@ export default function MapPage() {
     );
   }
 
+  const mapKey = `${yearFilter ?? "all"}-${countryFilter ?? "all"}-${groupFilter ?? "all"}-${victimFilter}-${page}`;
+
   return (
     <div className="w-full h-screen relative">
       <div className="absolute z-[1000] bg-white bg-opacity-90 text-black p-4 rounded-lg top-4 left-4 shadow-lg space-y-3 max-w-[300px]">
@@ -193,7 +195,7 @@ export default function MapPage() {
       </div>
 
       <MapClientWrapper
-        key={JSON.stringify({ yearFilter, countryFilter, groupFilter, victimFilter, page })}
+        key={mapKey}
         attacks={attacks}
         icon={icon}
         loadingMap={loadingMap}
