@@ -16,6 +16,43 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "GTD Visualizer",
   description: "Visualisation des données GTD - Global Terrorism Database",
+  keywords: [
+    "terrorisme",
+    "GTD",
+    "Global Terrorism Database",
+    "analyse IA",
+    "OSINT",
+    "cartographie attentats",
+    "visualisation données",
+    "machine learning",
+    "prévision attentats",
+    "intelligence artificielle"
+  ],
+  authors: [{ name: "WebCressonTech", url: "https://webcresson.com" }],
+  openGraph: {
+    title: "GTD Visualizer",
+    description: "Exploration des données du terrorisme mondial grâce à l'intelligence artificielle.",
+    url: "https://gtd.webcresson.com",
+    siteName: "GTD Visualizer",
+    images: [
+      {
+        url: "/analyse-webcressontech.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Aperçu GTD Visualizer",
+      },
+    ],
+    locale: "fr_FR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "GTD Visualizer",
+    description: "Analyse IA et cartographie du terrorisme mondial via la base GTD.",
+    creator: "@WebCressonTech",
+    images: ["/analyse-webcressontech.jpg"],
+  },
+  metadataBase: new URL("https://gtd.webcresson.com"),
 };
 
 function Header() {
