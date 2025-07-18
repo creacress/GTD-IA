@@ -1,0 +1,9 @@
+# *
+User-agent: *
+Allow: /
+
+# Host
+Host: https://predint.fr
+
+# Sitemaps
+Sitemap: https://predint.fr/sitemap.xml
