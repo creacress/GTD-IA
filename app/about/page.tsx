@@ -46,7 +46,7 @@ export default function AboutPage() {
             </p>
 
             <a
-                href="https://github.com/webcressontech/gtd-visualizer"
+                href="https://github.com/creacress/GTD-IA"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-block mt-2 text-blue-400 hover:underline"
