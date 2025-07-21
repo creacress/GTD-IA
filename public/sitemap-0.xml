@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:mobile="http://www.google.com/schemas/sitemap-mobile/1.0" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
-<url><loc>https://predint.fr/about</loc><lastmod>2025-07-18T13:51:20.518Z</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
-<url><loc>https://predint.fr</loc><lastmod>2025-07-18T13:51:20.519Z</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
-<url><loc>https://predint.fr/search</loc><lastmod>2025-07-18T13:51:20.519Z</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
-<url><loc>https://predint.fr/timeline</loc><lastmod>2025-07-18T13:51:20.519Z</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
-<url><loc>https://predint.fr/map</loc><lastmod>2025-07-18T13:51:20.519Z</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
+<url><loc>https://predint.fr</loc><lastmod>2025-07-21T08:08:18.438Z</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
+<url><loc>https://predint.fr/about</loc><lastmod>2025-07-21T08:08:18.439Z</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
+<url><loc>https://predint.fr/map</loc><lastmod>2025-07-21T08:08:18.439Z</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
+<url><loc>https://predint.fr/timeline</loc><lastmod>2025-07-21T08:08:18.439Z</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
+<url><loc>https://predint.fr/search</loc><lastmod>2025-07-21T08:08:18.439Z</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
 </urlset>

@@ -27,7 +27,7 @@ export default function Home() {
       <div className="flex flex-col items-center justify-center h-full text-center px-4 z-10 animate-fade-in">
         <NeonTitle as="h1" className="text-3xl sm:text-4xl md:text-5xl font-extrabold mb-4">GTD Visualizer</NeonTitle>
         <NeonDivider />
-        <NeonTitle as="h2" className="text-3xl sm:text-4xl md:text-5xl font-extrabold mb-4">          Plateforme de visualisation des données du Global Terrorism Database.
+        <NeonTitle as="h2" className="text-3xl sm:text-4xl md:text-5xl font-extrabold mb-4">Plateforme de visualisation des données du Global Terrorism Database.
         </NeonTitle>
         <NeonDivider />
         <div className="flex flex-wrap justify-center gap-4">
