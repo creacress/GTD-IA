@@ -23,8 +23,8 @@ export default class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="fixed inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-zinc-900 to-black text-white z-50">
           <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-white mb-6" />
-          <h2 className="text-2xl font-bold mb-2">Oops, une erreur est survenue</h2>
-          <p className="text-gray-300">Rechargement automatique dans quelques secondes...</p>
+          <h2 className="text-2xl font-bold mb-2">Attente de données</h2>
+          <p className="text-gray-300">Chargement automatique dans quelques secondes...</p>
         </div>
       )
     }
