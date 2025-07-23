@@ -95,13 +95,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="auto" translate="yes">
       <head>
         <link rel="icon" href="/favicon.ico" />
         <Script
           id="cookiebot"
           src="https://consent.cookiebot.com/uc.js"
-          data-cbid="5c42e1ec4-d052-42e2-ac42-94611f88f757"
+          data-cbid="5c421ec4-d052-42e2-ac42-94611f88f757"
           data-blockingmode="auto"
           type="text/javascript"
           strategy="beforeInteractive"
@@ -111,11 +111,11 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Script
-          id="cookie-declaration"
-          src="https://consent.cookiebot.com/5c42e1ec4-d052-42e2-ac42-94611f88f757/cd.js"
-          type="text/javascript"
-          strategy="afterInteractive"
-        />
+  id="CookieDeclaration"
+  src="https://consent.cookiebot.com/5c421ec4-d052-42e2-ac42-94611f88f757/cd.js"
+  type="text/javascript"
+  strategy="afterInteractive"
+/>
         <Script
           id="ga-consent"
           strategy="afterInteractive"
