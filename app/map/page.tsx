@@ -2,6 +2,7 @@
 import dynamic from "next/dynamic";
 import { useEffect, useState, useRef } from "react";
 import "leaflet/dist/leaflet.css";
+import FilterPanel from "./FilterPanel";
 
 type Filters = {
   years: number[];
@@ -107,6 +108,10 @@ export default function MapPage() {
         return res.json();
       })
       .then(setAttacks)
+      .catch(() => {
+        setAttacks([]);
+        setTotalPages(1);
+      })
       .finally(() => setLoadingMap(false));
   }, [yearFilter, countryFilter, groupFilter, victimFilter, page]);
 
@@ -143,56 +148,50 @@ export default function MapPage() {
 
   return (
     <div className="w-full h-screen relative">
-      <div className="absolute z-[1000] bg-white bg-opacity-90 text-black p-4 rounded-lg top-4 left-4 shadow-lg space-y-3 max-w-[300px]">
-        <div className="text-sm text-gray-800 font-medium">
-          {attacks.length} incidents affichés
+
+      {attacks.length === 0 && !loadingMap && (
+        <div className="absolute bottom-4 left-4 z-[1000] bg-white text-black px-4 py-2 rounded shadow text-sm">
+          Aucun événement trouvé pour ces filtres.
         </div>
+      )}
 
-        <input
-          type="text"
-          placeholder="Recherche résumé..."
-          className="w-full p-1 border rounded"
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-        />
+      <FilterPanel
+        searchText={searchText}
+        setSearchText={setSearchText}
+        yearFilter={yearFilter}
+        setYearFilter={setYearFilter}
+        countryFilter={countryFilter}
+        setCountryFilter={setCountryFilter}
+        groupFilter={groupFilter}
+        setGroupFilter={setGroupFilter}
+        victimFilter={victimFilter}
+        setVictimFilter={setVictimFilter}
+        filters={filters}
+        page={page}
+        totalPages={totalPages}
+        setPage={setPage}
+      />
 
-        <select className="w-full p-1 border rounded" onChange={e => setYearFilter(Number(e.target.value) || null)} value={yearFilter ?? ""}>
-          <option value="">Filtrer par année</option>
-          {filters.years.map(y => <option key={y} value={y}>{y}</option>)}
-        </select>
-
-        <select className="w-full p-1 border rounded" onChange={e => setCountryFilter(e.target.value || null)} value={countryFilter ?? ""}>
-          <option value="">Filtrer par pays</option>
-          {filters.countries.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
-
-        <select className="w-full p-1 border rounded" onChange={e => setGroupFilter(e.target.value || null)} value={groupFilter ?? ""}>
-          <option value="">Filtrer par groupe</option>
-          {filters.groups.map(g => <option key={g} value={g}>{g}</option>)}
-        </select>
-
-        <div>
-          <label htmlFor="victims" className="block text-sm">Victimes ≥ {victimFilter}</label>
-          <input type="range" id="victims" min="0" max="100" step="1"
-            value={victimFilter}
-            onChange={(e) => setVictimFilter(Number(e.target.value))}
-            className="w-full"
-          />
-        </div>
-
-        <button
-          onClick={resetFilters}
-          className="w-full bg-red-500 text-white py-1 px-2 rounded hover:bg-red-600 text-sm"
-        >
-          Réinitialiser les filtres
-        </button>
-
-        <div className="flex justify-between items-center gap-2">
-          <button disabled={page <= 1} onClick={() => setPage(p => Math.max(p - 1, 1))} className="text-sm bg-gray-200 px-2 py-1 rounded disabled:opacity-50">← Page</button>
-          <span className="text-sm">Page {page} / {totalPages}</span>
-          <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="text-sm bg-gray-200 px-2 py-1 rounded disabled:opacity-50">Page →</button>
-        </div>
-      </div>
+      <button
+        onClick={() => {
+          const headers = ["eventid", "iyear", "country_txt", "gname", "nkill", "summary"];
+          const rows = attacks.map((a) =>
+            headers.map((h) => JSON.stringify(a[h] ?? "")).join(",")
+          );
+          const csv = [headers.join(","), ...rows].join("\n");
+          const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.setAttribute("download", "attacks_export.csv");
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }}
+        className="absolute z-[1000] bottom-4 right-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-white text-sm shadow"
+      >
+        Exporter CSV
+      </button>
 
       <MapClientWrapper
         key={mapKey}
