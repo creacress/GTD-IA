@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Header from "./component/header";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ErrorBoundary from "./component/ErrorBoundary";
@@ -57,29 +58,6 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://gtd.webcresson.com"),
 };
 
-function Header() {
-  return (
-    <div className="relative">
-      <input id="menu-toggle" type="checkbox" className="hidden peer" />
-      <header className="z-30 bg-black/80 text-white px-4 py-3 flex justify-between items-center shadow-md backdrop-blur">
-        <Link href="/" className="text-lg font-extrabold tracking-widest uppercase">GTD</Link>
-
-        <label htmlFor="menu-toggle" className="block cursor-pointer md:hidden z-50">
-          <div className="w-6 h-0.5 bg-white mb-1"></div>
-          <div className="w-6 h-0.5 bg-white mb-1"></div>
-          <div className="w-6 h-0.5 bg-white"></div>
-        </label>
-
-        <nav className="fixed top-0 right-0 w-3/4 h-full bg-black/90 text-white flex flex-col justify-center items-center gap-6 text-xl font-semibold translate-x-full peer-checked:translate-x-0 transition-transform duration-300 md:static md:translate-x-0 md:flex-row md:items-center md:justify-end md:gap-6 md:bg-transparent md:text-base md:relative z-30">
-          <Link href="/map" className="hover:text-cyan-400 transition">Carte</Link>
-          <Link href="/timeline" className="hover:text-cyan-400 transition">Chronologie</Link>
-          <Link href="/search" className="hover:text-cyan-400 transition">Données</Link>
-          <Link href="/about" className="hover:text-cyan-400 transition">À propos</Link>
-        </nav>
-      </header>
-    </div>
-  );
-}
 
 function Footer() {
   return (
