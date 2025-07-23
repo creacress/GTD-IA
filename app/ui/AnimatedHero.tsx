@@ -19,12 +19,17 @@ export default function AnimatedHero() {
       <NeonDivider />
       <div className="flex flex-wrap justify-center gap-4">
         <Link href="/map" aria-label="Accéder à la carte interactive">
-          <span className="px-5 py-2 bg-red-700 hover:bg-red-800 rounded-full text-white font-semibold uppercase tracking-wide text-sm focus:outline-none focus:ring-4 focus:ring-white">
+          <span className="px-5 py-2 bg-blue-700 hover:bg-blue-800 rounded-full text-white font-semibold uppercase tracking-wide text-sm focus:outline-none focus:ring-4 focus:ring-white">
             Carte Interactive
           </span>
         </Link>
+        <Link href="/terror" aria-label="Accéder à la carte interactive">
+          <span className="px-5 py-2 bg-white text-black hover:bg-gray-100 rounded-full font-semibold uppercase tracking-wide text-sm focus:outline-none focus:ring-4 focus:ring-white">
+          Veille Terrorisme
+          </span>
+        </Link>
         <Link href="/timeline" aria-label="Accéder à la chronologie des attentats">
-          <span className="px-5 py-2 bg-blue-700 hover:bg-blue-800 rounded-full text-white font-semibold uppercase tracking-wide text-sm focus:outline-none focus:ring-4 focus:ring-white">
+          <span className="px-5 py-2 bg-red-700 hover:bg-red-800 rounded-full text-white font-semibold uppercase tracking-wide text-sm focus:outline-none focus:ring-4 focus:ring-white">
             Chronologie
           </span>
         </Link>
