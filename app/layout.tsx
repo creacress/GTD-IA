@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ErrorBoundary from "./component/ErrorBoundary";
+import Script from "next/script";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -76,7 +77,13 @@ function Footer() {
   return (
     <footer className="relative z-20 bg-black/80 text-white text-sm text-center py-4 border-t border-neutral-700 backdrop-blur">
       <p>
-        Données © <a href="https://start.umd.edu/gtd" className="underline">Global Terrorism Database</a> | Projet IA by WebCressonTech
+        Données © <a href="https://start.umd.edu/gtd" className="underline">Global Terrorism Database</a> | Projet IA by WebCressonTech —
+        <a
+          href="javascript:Cookiebot.show();"
+          className="underline ml-1"
+        >
+          Gestion des cookies
+        </a>
       </p>
     </footer>
   );
@@ -91,21 +98,44 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link rel="icon" href="/favicon.ico" />
-        <script async src="https://www.googletagmanager.com/gtag/js?id=G-7MK517N0RB"></script>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', 'G-7MK517N0RB');
-            `,
-          }}
+        <Script
+          id="cookiebot"
+          src="https://consent.cookiebot.com/uc.js"
+          data-cbid="5c42e1ec4-d052-42e2-ac42-94611f88f757"
+          data-blockingmode="auto"
+          type="text/javascript"
+          strategy="beforeInteractive"
         />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <Script
+          id="cookie-declaration"
+          src="https://consent.cookiebot.com/5c42e1ec4-d052-42e2-ac42-94611f88f757/cd.js"
+          type="text/javascript"
+          strategy="afterInteractive"
+        />
+        <Script
+          id="ga-consent"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              function gtag(){dataLayer.push(arguments);}
+              window.dataLayer = window.dataLayer || [];
+              window.addEventListener("CookiebotOnConsentReady", function() {
+                if (window.Cookiebot?.consents?.given?.g1) {
+                  gtag('js', new Date());
+                  gtag('config', 'G-7MK517N0RB');
+                }
+              });
+            `,
+          }}
+        />
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-7MK517N0RB"
+          strategy="afterInteractive"
+        />
         <div className="relative flex flex-col min-h-screen bg-black text-white w-full">
           <Header />
           <main className="flex-1 w-full relative z-10 overflow-auto">
