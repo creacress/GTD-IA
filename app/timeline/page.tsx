@@ -8,86 +8,106 @@ import {
   BarElement,
   Tooltip,
   Legend,
+  Title,
 } from "chart.js";
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend, Title);
 
+// Types sûrs
 type Event = {
-  eventid: number;
-  iyear: number;
+  eventid: number | string;
+  iyear: number | string;
   country_txt: string;
   gname: string;
-  nkill: number;
+  nkill: number | string | null;
 };
 
 export default function TimelinePage() {
   const [years, setYears] = useState<number[]>([]);
-  const [counts, setCounts] = useState<{ [year: number]: number }>({});
+  const [counts, setCounts] = useState<Record<number, number>>({});
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [groupFilter, setGroupFilter] = useState<string>("");
   const [countryFilter, setCountryFilter] = useState<string>("");
   const [minKills, setMinKills] = useState<number>(0);
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadingYear, setLoadingYear] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
+  // Charge les années + le total par année
   useEffect(() => {
-    setLoading(true);
-    fetch("/api/filters")
-      .then(async res => {
-        if (!res.ok) {
-          const errText = await res.text();
-          console.error("Erreur API /api/filters :", errText);
-          return;
-        }
-        return res.json();
-      })
-      .then(async (data) => {
-        if (!data) return;
-        const uniqueYears = (Array.from(new Set(data.years as number[])))
-          .filter((y): y is number => typeof y === 'number' && !isNaN(y))
+    (async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await fetch("/api/filters");
+        if (!res.ok) throw new Error("Impossible de charger les années");
+        const data = await res.json();
+        const uniqueYears = Array.from(new Set(data.years as number[]))
+          .filter((y): y is number => typeof y === "number" && !isNaN(y))
           .sort((a, b) => a - b);
-        console.log("Data.years brut:", data.years);
-        setYears(uniqueYears as number[]);
-        console.log("Années récupérées:", uniqueYears);
-        const yearCounts: { [key: number]: number } = {};
-  
-        await Promise.all((uniqueYears as number[]).map(async (year: number) => {
-          const res = await fetch(`/api/attacks?year=${year}`);
-          const count = res.headers.get("x-total-count") || "0";
-          yearCounts[year] = parseInt(count, 10);
-        }));
-  
+        setYears(uniqueYears);
+
+        // récupère le total par année (via entête x-total-count)
+        const yearCounts: Record<number, number> = {};
+        for (const y of uniqueYears) {
+          const r = await fetch(`/api/attacks?year=${y}&limit=1`); // limit 1: on veut juste le count
+          const count = parseInt(r.headers.get("x-total-count") || "0", 10);
+          yearCounts[y] = Number.isFinite(count) ? count : 0;
+        }
         setCounts(yearCounts);
-        console.log("Nombre d'attentats par année:", yearCounts);
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
         setLoading(false);
-      });
+      }
+    })();
   }, []);
 
+  // Charge les événements de l'année sélectionnée
   useEffect(() => {
-    if (selectedYear) {
-      fetch(`/api/attacks?year=${selectedYear}&limit=1000`)
-        .then(res => res.json())
-        .then(setEvents);
-    }
+    if (!selectedYear) return;
+    (async () => {
+      try {
+        setLoadingYear(true);
+        const r = await fetch(`/api/attacks?year=${selectedYear}&limit=1000`);
+        if (!r.ok) throw new Error("Chargement des événements impossible");
+        const json = (await r.json()) as Event[];
+        setEvents(json);
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setLoadingYear(false);
+      }
+    })();
   }, [selectedYear]);
 
+  // Données du graphique
   const chartData = useMemo(() => {
     if (years.length === 0 || Object.keys(counts).length === 0) return null;
-
-    console.log("Données chartData:", years.map(y => counts[y] || 0));
     return {
       labels: years,
       datasets: [
         {
           label: "Nombre d'attentats",
-          data: years.map(y => counts[y] || 0),
-          backgroundColor: "rgba(255, 99, 132, 0.6)",
+          data: years.map((y) => counts[y] || 0),
+          backgroundColor: (ctx: any) => {
+            const c = ctx.chart.ctx;
+            const g = c.createLinearGradient(0, 0, 0, 300);
+            g.addColorStop(0, "rgba(56,189,248,0.9)"); // cyan-400
+            g.addColorStop(1, "rgba(99,102,241,0.35)"); // indigo-500
+            return g;
+          },
+          borderRadius: 6,
+          hoverBackgroundColor: "rgba(56,189,248,1)",
         },
       ],
     };
   }, [years, counts]);
 
-  const options = {
+  const options = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
     onClick: (_: any, elements: any[]) => {
       if (elements.length > 0) {
         const index = elements[0].index;
@@ -95,118 +115,170 @@ export default function TimelinePage() {
         setSelectedYear(year);
       }
     },
-    responsive: true,
     plugins: {
       legend: { display: false },
+      tooltip: {
+        backgroundColor: "rgba(15,23,42,0.9)",
+        titleColor: "#fff",
+        bodyColor: "#e5e7eb",
+        borderColor: "rgba(255,255,255,0.1)",
+        borderWidth: 1,
+      },
+      title: {
+        display: true,
+        text: "Chronologie des attentats (clic pour détailler)",
+        color: "#e2e8f0",
+        padding: 16,
+      },
     },
-  };
+    scales: {
+      x: {
+        grid: { color: "rgba(255,255,255,0.06)" },
+        ticks: { color: "rgba(255,255,255,0.8)", maxRotation: 0 },
+      },
+      y: {
+        grid: { color: "rgba(255,255,255,0.06)" },
+        ticks: { color: "rgba(255,255,255,0.8)" },
+      },
+    },
+  }), [years]);
 
-  const filteredEvents = events.filter(e =>
-    e.gname.toLowerCase().includes(groupFilter.toLowerCase()) &&
-    e.country_txt.toLowerCase().includes(countryFilter.toLowerCase()) &&
-    (e.nkill ?? 0) >= minKills
-  );
+  // Filtrage local dans le modal
+  const filteredEvents = events.filter((e) => {
+    const g = (e.gname || "").toLowerCase();
+    const c = (e.country_txt || "").toLowerCase();
+    const kills = Number(e.nkill);
+    return (
+      g.includes(groupFilter.toLowerCase()) &&
+      c.includes(countryFilter.toLowerCase()) &&
+      (Number.isFinite(kills) ? kills : 0) >= minKills
+    );
+  });
 
+  // Modal futuriste
   const modal = selectedYear ? (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 overflow-y-auto">
-      <div className="bg-white rounded-lg p-6 max-w-5xl w-full mt-10 mb-10 mx-auto space-y-4">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold text-blue-600">Attentats en {selectedYear}</h2>
+    <div className="fixed inset-0 z-50">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div className="relative mx-auto mt-10 mb-10 w-[min(96vw,1100px)] rounded-3xl border border-white/10 bg-[#0b1021]/90 text-white p-6 shadow-[0_0_1px_0_rgba(255,255,255,0.2),0_40px_80px_-40px_rgba(0,0,0,0.8)]">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl sm:text-2xl font-extrabold bg-gradient-to-b from-white to-cyan-200 bg-clip-text text-transparent">
+            Attentats en {selectedYear}
+          </h2>
           <button
             onClick={() => setSelectedYear(null)}
-            className="text-red-500 font-semibold text-sm"
+            className="rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
           >
             Fermer ✕
           </button>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredEvents.length > 0 ? (
-            filteredEvents.map((e) => (
-              <div
-                key={e.eventid}
-                className="bg-white shadow-md rounded-lg p-4 border border-gray-200 hover:shadow-lg transition-shadow duration-300"
-              >
-                <p className="text-sm text-black"><strong>Pays :</strong> {e.country_txt || "Non renseigné"}</p>
-                <p className="text-sm text-black"><strong>Groupe :</strong> {e.gname || "Inconnu"}</p>
-                <p className="text-sm text-black"><strong>Morts :</strong> {(e.nkill ?? 0).toString()}</p>
-              </div>
-            ))
-          ) : (
-            <p className="text-sm text-gray-500">Aucune donnée disponible pour cette année.</p>
-          )}
+
+        {/* Filtres locaux */}
+        <div className="mb-4 grid grid-cols-1 md:grid-cols-4 gap-3">
+          <input
+            value={groupFilter}
+            onChange={(e) => setGroupFilter(e.target.value)}
+            placeholder="Filtrer par groupe"
+            className="w-full rounded-xl bg-black/40 border border-white/10 px-3 py-2"
+          />
+          <input
+            value={countryFilter}
+            onChange={(e) => setCountryFilter(e.target.value)}
+            placeholder="Filtrer par pays"
+            className="w-full rounded-xl bg-black/40 border border-white/10 px-3 py-2"
+          />
+          <input
+            type="number"
+            min={0}
+            value={minKills}
+            onChange={(e) => setMinKills(parseInt(e.target.value || "0", 10))}
+            placeholder="Morts min"
+            className="w-full rounded-xl bg-black/40 border border-white/10 px-3 py-2"
+          />
+          <button
+            onClick={() => {
+              setGroupFilter("");
+              setCountryFilter("");
+              setMinKills(0);
+            }}
+            className="rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 px-3 py-2"
+          >
+            Réinitialiser
+          </button>
         </div>
-        {filteredEvents.length === 0 && (
-          <p className="text-center text-white/80 text-sm mt-4">
-            Aucun attentat trouvé pour ces filtres.
-          </p>
+
+        {loadingYear ? (
+          <div className="text-center py-8 text-white/80">Chargement…</div>
+        ) : filteredEvents.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredEvents.map((e) => (
+              <div
+                key={String(e.eventid)}
+                className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-4 hover:bg-white/10 transition-colors"
+              >
+                <p className="text-sm"><span className="text-white/60">Pays :</span> {e.country_txt || "—"}</p>
+                <p className="text-sm"><span className="text-white/60">Groupe :</span> {e.gname || "—"}</p>
+                <p className="text-sm"><span className="text-white/60">Morts :</span> {Number(e.nkill) || 0}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-white/70">Aucune donnée disponible pour cette année.</p>
         )}
       </div>
     </div>
   ) : null;
 
   return (
-    <div className="p-8 space-y-6 min-h-screen overflow-y-scroll">
-      <h1 className="text-xl font-bold text-white">Chronologie des attentats</h1>
-      
-      <div className="flex items-center space-x-4">
-        <label className="text-sm text-white font-medium">Filtrer par groupe :</label>
-        <input
-          type="text"
-          value={groupFilter}
-          onChange={(e) => setGroupFilter(e.target.value)}
-          placeholder="ex: Taliban"
-          className="border border-gray-300 rounded px-2 py-1 text-sm"
-        />
-        <button
-          onClick={() => setGroupFilter("")}
-          className="text-blue-400 text-sm underline"
-        >
-          Réinitialiser
-        </button>
-      </div>
-      
-      <div className="flex items-center space-x-4 mt-2">
-        <label className="text-sm text-white font-medium">Filtrer par pays :</label>
-        <input
-          type="text"
-          value={countryFilter}
-          onChange={(e) => setCountryFilter(e.target.value)}
-          placeholder="ex: Iraq"
-          className="border border-gray-300 rounded px-2 py-1 text-sm"
-        />
-        <label className="text-sm text-white font-medium">Nombre minimum de morts :</label>
-        <input
-          type="number"
-          value={minKills}
-          onChange={(e) => setMinKills(parseInt(e.target.value || "0", 10))}
-          className="border border-gray-300 rounded px-2 py-1 text-sm w-24"
-        />
-      </div>
-      
-      {loading && (
-        <div className="text-center py-4">
-          <span className="text-white/80 animate-pulse">Chargement des données...</span>
-        </div>
-      )}
-      {!loading && !chartData && (
-        <div className="text-white/80 text-center">
-          Aucune donnée disponible pour le moment.
-        </div>
-      )}
-      
-      {chartData && (
-        <div className="h-[400px]">
-          <Bar data={chartData} options={options} />
-        </div>
-      )}
-      
+    <div className="relative min-h-screen text-white bg-[#0a0f1f]">
+      {/* BG accents */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 z-[-1] opacity-60 [mask-image:radial-gradient(70%_60%_at_50%_40%,black,transparent)]"
+        style={{
+          background:
+            "radial-gradient(1200px 600px at 20% 10%, #3b82f6 15%, transparent 60%), radial-gradient(900px 500px at 80% 20%, #22d3ee 10%, transparent 55%), radial-gradient(900px 600px at 50% 80%, #a78bfa 10%, transparent 55%)",
+        }}
+      />
+
+      <main className="mx-auto max-w-7xl px-6 sm:px-10 py-10 md:py-14 space-y-6">
+        <header className="flex items-center justify-between">
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-b from-white to-cyan-200 bg-clip-text text-transparent">
+            Chronologie des attentats
+          </h1>
+        </header>
+
+        {/* panneau filtre global (affiche aussi l'état) */}
+        <section className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-4 sm:p-5">
+          {loading ? (
+            <div className="text-sm text-white/70">Chargement des années…</div>
+          ) : (
+            <div className="text-sm text-white/70">
+              {Object.values(counts).reduce((a, b) => a + b, 0).toLocaleString("fr-FR")} événements au total
+            </div>
+          )}
+        </section>
+
+        {/* Chart */}
+        <section className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-3 sm:p-5">
+          {error && <div className="mb-3 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-200 text-sm">{error}</div>}
+          {!loading && !chartData && (
+            <div className="text-white/80 text-center py-10">Aucune donnée disponible pour le moment.</div>
+          )}
+          {chartData && (
+            <div className="h-[420px]">
+              <Bar data={chartData} options={options} />
+            </div>
+          )}
+        </section>
+      </main>
+
       {modal}
-      
+
       {selectedYear && (
         <div className="fixed bottom-6 right-6">
           <button
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="bg-blue-500 text-white px-4 py-2 rounded shadow-lg hover:bg-blue-600 transition"
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            className="bg-gradient-to-r from-sky-500 via-cyan-400 to-violet-500 text-white px-4 py-2 rounded-xl shadow-lg hover:opacity-90 transition"
           >
             ↑ Haut
           </button>
