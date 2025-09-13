@@ -5,10 +5,10 @@ import Link from "next/link";
 
 // ---- Types ----
 type Attack = {
-  eventid: string;
+  eventid: string | number;
   latitude: number | null;
   longitude: number | null;
-  iyear: number;
+  iyear: number | string;
   country_txt: string | null;
   gname: string | null;
   nkill: number | string | null;
@@ -16,8 +16,6 @@ type Attack = {
 
 // ---- Helpers ----
 const fmt = new Intl.NumberFormat("fr-FR");
-const yearsRange = (start = 1970, end = new Date().getFullYear()) =>
-  Array.from({ length: end - start + 1 }, (_, i) => start + i);
 
 // Simple equirectangular projection for a canvas map
 function project(lat: number, lon: number, w: number, h: number) {
@@ -27,7 +25,7 @@ function project(lat: number, lon: number, w: number, h: number) {
 }
 
 // ---- Neon UI atoms (inline to avoid extra files) ----
-function Kpi({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
+function Kpi({ label, value, sub }: { label: string; value: string | number; sub?: React.ReactNode }) {
   return (
     <div className="relative rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-4 sm:p-5 shadow-[0_0_1px_0_rgba(255,255,255,0.2),0_20px_60px_-30px_rgba(0,0,0,0.6)]">
       <div className="absolute -inset-x-2 -top-2 h-1 bg-gradient-to-r from-transparent via-cyan-400/60 to-transparent" />
@@ -35,14 +33,14 @@ function Kpi({ label, value, sub }: { label: string; value: string | number; sub
       <div className="mt-1 text-2xl sm:text-3xl font-extrabold bg-gradient-to-b from-white to-cyan-200 bg-clip-text text-transparent">
         {value}
       </div>
-      {sub ? <div className="mt-1 text-xs text-white/60">{sub}</div> : null}
+      {sub ? <div className="mt-2 text-xs text-white/60">{sub}</div> : null}
     </div>
   );
 }
 
 function Spark({ series }: { series: number[] }) {
   const path = useMemo(() => {
-    if (!series.length) return "";
+    if (!series.length) return null as any;
     const w = 160;
     const h = 40;
     const max = Math.max(...series);
@@ -111,134 +109,106 @@ function CanvasMap({ points }: { points: { lat: number; lon: number }[] }) {
   );
 }
 
-function Loader({ loaded, total }: { loaded: number; total: number | null }) {
-  const pct = total && total > 0 ? Math.min(100, Math.round((loaded / total) * 100)) : 0;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md">
-      {/* glow background */}
-      <div aria-hidden className="absolute inset-0 opacity-60 [mask-image:radial-gradient(50%_50%_at_50%_50%,black,transparent)]" style={{
-        background:
-          "radial-gradient(800px 300px at 20% 20%, rgba(59,130,246,0.25), transparent), radial-gradient(700px 260px at 80% 30%, rgba(34,211,238,0.2), transparent), radial-gradient(900px 300px at 50% 80%, rgba(167,139,250,0.2), transparent)",
-      }} />
-
-      <div className="relative z-10 w-[min(92vw,520px)] rounded-2xl border border-white/10 bg-white/10 backdrop-blur-xl p-6 shadow-[0_0_1px_0_rgba(255,255,255,0.25),0_20px_60px_-30px_rgba(0,0,0,0.7)]">
-        {/* spinner */}
-        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-white/5">
-          <svg className="h-10 w-10 animate-spin text-cyan-400" viewBox="0 0 24 24">
-            <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-            <path d="M22 12a10 10 0 0 1-10 10" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-          </svg>
-        </div>
-        <div className="text-center">
-          <div className="text-sm uppercase tracking-wider text-white/70">Chargement des données</div>
-          <div className="mt-1 text-lg font-semibold text-white">
-            {total ? `${loaded.toLocaleString('fr-FR')} / ${total.toLocaleString('fr-FR')}` : `${loaded.toLocaleString('fr-FR')} enregistrements`}
-          </div>
-        </div>
-        {/* progress bar */}
-        <div className="mt-5 h-2 w-full rounded-full bg-white/10 overflow-hidden">
-          <div className="h-2 rounded-full bg-gradient-to-r from-sky-500 via-cyan-400 to-violet-500 transition-all" style={{ width: `${pct}%` }} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // années (depuis /api/filters) + données brutes (depuis /api/attacks)
+  const [years, setYears] = useState<number[]>([]);
   const [data, setData] = useState<Attack[]>([]);
+
+  // filtres
   const [year, setYear] = useState<string>("");
   const [country, setCountry] = useState<string>("");
   const [minVictims, setMinVictims] = useState<number>(0);
-  const [total, setTotal] = useState<number | null>(null);
-  const [loaded, setLoaded] = useState<number>(0);
 
-  // Fetch attacks via your API
-  const PAGE_SIZE = 5000; // charge tout en pages (augmente si besoin)
-  async function fetchAll() {
-    try {
-      setLoading(true);
-      setError(null);
-      setLoaded(0);
-      setTotal(null);
-      let page = 1;
-      let total = Infinity;
-      const acc: Attack[] = [];
+  async function fetchYears() {
+    const res = await fetch("/api/filters");
+    if (!res.ok) throw new Error("Impossible de charger les années");
+    const json = await res.json();
+    const ys = Array.from(new Set(json.years as number[]))
+      .filter((y): y is number => typeof y === "number" && Number.isFinite(y))
+      .sort((a, b) => a - b);
+    setYears(ys);
+  }
 
-      const paramsBase = new URLSearchParams();
-      if (year) paramsBase.set("year", year);
-      if (country) paramsBase.set("country", country);
-      if (minVictims) paramsBase.set("victims", String(minVictims));
-
-      while (acc.length < total) {
-        const params = new URLSearchParams(paramsBase);
-        params.set("limit", String(PAGE_SIZE));
-        params.set("page", String(page));
-        const res = await fetch(`/api/attacks?${params.toString()}`);
-        if (!res.ok) throw new Error("Impossible de charger les données");
-        // total renvoyé par l'API via l'entête x-total-count
-        const hdr = res.headers.get("x-total-count");
-        if (hdr) {
-          const t = parseInt(hdr || "0", 10);
-          if (Number.isFinite(t) && t > 0) setTotal(t);
-          total = t || total;
-        }
-        const json: Attack[] = await res.json();
-        acc.push(...json);
-        setLoaded(acc.length);
-        if (json.length < PAGE_SIZE) break;
-        page += 1;
-      }
-      if (total === Infinity) setTotal(acc.length);
-
-      setData(acc);
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
+  async function fetchAttacks() {
+    const params = new URLSearchParams();
+    if (year) params.set("year", year);
+    if (country) params.set("country", country);
+    if (minVictims) params.set("victims", String(minVictims));
+    // comme timeline: on ne charge pas tout; limite haute mais raisonnable
+    params.set("limit", "30000");
+    const res = await fetch(`/api/attacks?${params.toString()}`);
+    if (!res.ok) throw new Error("Impossible de charger les événements");
+    const json = (await res.json()) as Attack[];
+    setData(json);
   }
 
   useEffect(() => {
-    fetchAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    (async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        await fetchYears();
+        await fetchAttacks();
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
-  // Aggregations
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoading(true);
+        await fetchAttacks();
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [year, country, minVictims]);
+
+  const perYear = useMemo(() => {
+    const m: Record<number, number> = {};
+    for (const d of data) {
+      const y = Number(d.iyear);
+      if (Number.isFinite(y)) m[y] = (m[y] || 0) + 1;
+    }
+    return m;
+  }, [data]);
+
+  const yearList = useMemo(() => years, [years]);
+
+  const sparkSeries = useMemo(() => {
+    return yearList.map((y) => perYear[y] || 0);
+  }, [perYear, yearList]);
+
   const kpis = useMemo(() => {
     const total = data.length;
-    const deaths = data.reduce((sum, d) => {
+    const deaths = data.reduce((s, d) => {
       const v = Number(d.nkill);
-      return sum + (Number.isFinite(v) ? v : 0);
+      return s + (Number.isFinite(v) ? v : 0);
     }, 0);
-    const countries = new Set(data.map((d) => d.country_txt).filter(Boolean)).size;
-    const groups = new Set(data.map((d) => d.gname).filter(Boolean)).size;
+    const countries = new Set(data.map(d => d.country_txt).filter(Boolean)).size;
+    const groups = new Set(data.map(d => d.gname).filter(Boolean)).size;
     return { total, deaths, countries, groups };
   }, [data]);
 
-  const perYear = useMemo(() => {
-    const map: Record<number, number> = {};
-    for (const d of data) map[d.iyear] = (map[d.iyear] || 0) + 1;
-    return map;
-  }, [data]);
-
   const points = useMemo(() =>
-    data.filter(d => d.latitude != null && d.longitude != null).map(d => ({ lat: d.latitude as number, lon: d.longitude as number })),
+    data.filter(d => d.latitude != null && d.longitude != null).map(d => ({ lat: Number(d.latitude), lon: Number(d.longitude) })),
   [data]);
 
-  const sparkSeries = useMemo(() => {
-    const ys = yearsRange(1998, new Date().getFullYear());
-    return ys.map((y) => perYear[y] || 0);
-  }, [perYear]);
-
-  // Unique lists for filters
-  const countryList = useMemo(() => Array.from(new Set(data.map(d => d.country_txt).filter(Boolean))).sort(), [data]);
-  const yearList = useMemo(() => Array.from(new Set(data.map(d => d.iyear))).sort((a,b)=>a-b), [data]);
+  const applyFilters = async () => {
+    await fetchAttacks();
+  };
 
   return (
     <div className="relative min-h-screen text-white bg-[#0a0f1f]">
-      {loading && <Loader loaded={loaded} total={total} />}
       {/* bg accents */}
       <div aria-hidden className="pointer-events-none fixed inset-0 z-[-1] opacity-60 [mask-image:radial-gradient(70%_60%_at_50%_40%,black,transparent)]" style={{
         background:
@@ -253,21 +223,18 @@ export default function Dashboard() {
           </div>
         </header>
 
-        {/* Filters */}
+        {/* Filtres */}
         <section className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-4 sm:p-5 mb-6">
-          <div className="mb-3 text-xs text-white/70">{loading ? "Chargement…" : `${fmt.format(data.length)} enregistrements chargés`}</div>
+          <div className="mb-3 text-xs text-white/70">{loading ? "Chargement…" : `${fmt.format(kpis.total)} événements chargés`}</div>
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <select className="w-full rounded-xl bg-black/40 border border-white/10 px-3 py-2" value={year} onChange={e=>setYear(e.target.value)}>
               <option value="">Année (toutes)</option>
               {yearList.map(y => <option key={y} value={y}>{y}</option>)}
             </select>
-            <select className="w-full rounded-xl bg-black/40 border border-white/10 px-3 py-2" value={country} onChange={e=>setCountry(e.target.value)}>
-              <option value="">Pays (tous)</option>
-              {countryList.map((c:any) => <option key={String(c)} value={String(c)}>{String(c)}</option>)}
-            </select>
+            <input className="w-full rounded-xl bg-black/40 border border-white/10 px-3 py-2" value={country} onChange={e=>setCountry(e.target.value)} placeholder="Pays (texte exact)" />
             <input className="w-full rounded-xl bg-black/40 border border-white/10 px-3 py-2" type="number" min={0} value={minVictims} onChange={e=>setMinVictims(Number(e.target.value))} placeholder="Victimes min" />
             <div className="flex gap-2">
-              <button onClick={fetchAll} className="flex-1 relative inline-flex items-center justify-center px-4 py-2 rounded-xl font-medium">
+              <button onClick={applyFilters} className="flex-1 relative inline-flex items-center justify-center px-4 py-2 rounded-xl font-medium">
                 <span className="absolute inset-0 rounded-xl bg-gradient-to-r from-sky-500 via-cyan-400 to-violet-500 opacity-90" />
                 <span className="relative">Appliquer</span>
               </button>
@@ -278,7 +245,7 @@ export default function Dashboard() {
 
         {/* KPIs */}
         <section className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <Kpi label="Événements" value={loading?"…":fmt.format(kpis.total)} sub={<>{sparkSeries.length>0 && <Spark series={sparkSeries} />}</> as unknown as string} />
+          <Kpi label="Événements" value={loading?"…":fmt.format(kpis.total)} sub={<Spark series={sparkSeries} />} />
           <Kpi label="Victimes" value={loading?"…":fmt.format(kpis.deaths)} />
           <Kpi label="Pays touchés" value={loading?"…":fmt.format(kpis.countries)} />
           <Kpi label="Groupes" value={loading?"…":fmt.format(kpis.groups)} />
@@ -287,8 +254,9 @@ export default function Dashboard() {
         {/* Map + Bars */}
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           <div className="lg:col-span-2">
-            <h2 className="mb-3 text-sm uppercase tracking-wider text-white/70">Chaleur géographique</h2>
+            <h2 className="mb-3 text-sm uppercase tracking-wider text-white/70">Carte (échantillon optimisé)</h2>
             <CanvasMap points={points} />
+            <div className="mt-2 text-xs text-white/60">{fmt.format(points.length)} points affichés (limités pour les perfs)</div>
           </div>
           <div>
             <h2 className="mb-3 text-sm uppercase tracking-wider text-white/70">Événements par année</h2>
